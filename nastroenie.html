@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Для тебя">
+<meta property="og:description" content="Открой, это тебе">
+<meta name="theme-color" content="#4e5864">
+<title>Настроение</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Marck+Script&display=swap">
+<link rel="stylesheet" href="kit.css">
+<style>
+  :root { --bg: #4e5864; --ink: #ffffff; --glow: rgba(20, 30, 45, 0.5); --muted: rgba(255, 255, 255, 0.78); }
+</style>
+
+<canvas id="scene" aria-label="Дождливый серый день незаметно проясняется: дождь стихает, тучи расходятся, выходит солнце и появляется радуга"></canvas>
+<div id="say"><span>Софа,</span><h1>с тобой как-то незаметно становится лучше настроение</h1></div>
+<p id="hint">коснись экрана</p>
+
+<script src="kit.js"></script>
+<script>
+(function () {
+  var drops = [], flowers = [];
+  var clouds = [
+    { x: 0.2, y: 0.36, s: 1.1, d: -1 }, { x: 0.55, y: 0.33, s: 1.4, d: 1 }, { x: 0.84, y: 0.39, s: 1.0, d: 1 },
+    { x: 0.38, y: 0.45, s: 0.9, d: -1 }, { x: 0.7, y: 0.47, s: 0.8, d: 1 }
+  ];
+  var BLOBS = [[-1, 0, 0.7], [-0.35, -0.35, 0.85], [0.4, -0.25, 0.75], [1, 0.05, 0.6], [0, 0.15, 0.8]];
+  var BOW = ['#ff6b6b', '#ffa94d', '#ffe066', '#69db7c', '#4dabf7', '#b197fc'];
+  var PETALS = ['#ff8fa3', '#ffffff', '#ffd43b', '#c79bff'];
+
+  function hillY(S, x) { return S.H * 0.91 + Math.sin(x / S.W * 4.2 + 2) * S.H * 0.025; }
+
+  play({
+    sayAt: 3, hintAt: 18, endAt: 40,
+    init: function () {
+      drops = []; flowers = [];
+      for (var i = 0; i < 130; i++) drops.push({ x: Math.random(), y: Math.random(), l: 10 + Math.random() * 14, sp: 500 + Math.random() * 300 });
+      for (var f = 0; f < 14; f++) flowers.push({ x: 0.04 + Math.random() * 0.92, at: 0.6 + Math.random() * 0.33, c: PETALS[f % 4] });
+    },
+    draw: function (c, S) {
+      var t = S.t, W = S.W, H = S.H, u = Math.min(W, H), p = K.prog(t, 2, 14), i, x;
+
+      // небо
+      var sky = c.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, K.rgb([78, 88, 100], [92, 168, 238], p));
+      sky.addColorStop(1, K.rgb([128, 134, 140], [255, 221, 180], p));
+      c.fillStyle = sky; c.fillRect(0, 0, W, H);
+
+      // радуга
+      var ra = K.prog(t, 11.5, 5) * 0.5;
+      if (ra > 0) {
+        var br = Math.max(W * 0.62, H * 0.34), bw = br * 0.035;
+        c.globalAlpha = ra; c.lineWidth = bw + 0.6; c.lineCap = 'butt';
+        for (i = 0; i < 6; i++) {
+          c.strokeStyle = BOW[i];
+          c.beginPath(); c.arc(S.cx, H * 0.92, br - i * bw, Math.PI, Math.PI * 2); c.stroke();
+        }
+        c.globalAlpha = 1;
+      }
+
+      // солнце
+      var sx = W * 0.74, sy = K.lerp(H * 0.68, H * 0.52, p), sr = u * 0.11;
+      var sg = c.createRadialGradient(sx, sy, 0, sx, sy, sr * 4);
+      sg.addColorStop(0, 'rgba(255,236,170,' + (0.55 * p).toFixed(3) + ')');
+      sg.addColorStop(1, 'rgba(255,236,170,0)');
+      c.fillStyle = sg; c.fillRect(sx - sr * 4, sy - sr * 4, sr * 8, sr * 8);
+      c.strokeStyle = 'rgba(255,233,168,' + (0.8 * p).toFixed(3) + ')'; c.lineWidth = 3; c.lineCap = 'round';
+      for (i = 0; i < 12; i++) {
+        var a = i * Math.PI / 6 + t * 0.15;
+        c.beginPath(); c.moveTo(sx + Math.cos(a) * sr * 1.25, sy + Math.sin(a) * sr * 1.25);
+        c.lineTo(sx + Math.cos(a) * sr * 1.7, sy + Math.sin(a) * sr * 1.7); c.stroke();
+      }
+      c.fillStyle = 'rgba(255,226,130,' + p.toFixed(3) + ')';
+      c.beginPath(); c.arc(sx, sy, sr, 0, 6.283); c.fill();
+
+      // тучи расходятся и светлеют
+      c.fillStyle = K.rgb([96, 104, 114], [255, 255, 255], p, K.lerp(0.95, 0.75, p));
+      for (i = 0; i < clouds.length; i++) {
+        var cl = clouds[i], cs = cl.s * u * 0.11;
+        var cx = cl.x * W + cl.d * p * W * 0.55 + Math.sin(t * 0.2 + cl.x * 9) * 8, cy = cl.y * H;
+        for (var b = 0; b < BLOBS.length; b++) {
+          c.beginPath(); c.arc(cx + BLOBS[b][0] * cs, cy + BLOBS[b][1] * cs, BLOBS[b][2] * cs, 0, 6.283); c.fill();
+        }
+      }
+
+      // дождь стихает
+      var n = Math.floor(drops.length * (1 - K.prog(t, 2, 9.5)));
+      c.strokeStyle = 'rgba(210,225,240,0.5)'; c.lineWidth = 1.2;
+      for (i = 0; i < n; i++) {
+        var d = drops[i];
+        d.y += d.sp * S.dt / H;
+        if (d.y > 1) { d.y -= 1; d.x = Math.random(); }
+        c.beginPath(); c.moveTo(d.x * W, d.y * H); c.lineTo(d.x * W - 3, d.y * H + d.l); c.stroke();
+      }
+
+      // холмы
+      c.fillStyle = K.rgb([86, 104, 92], [108, 196, 120], p);
+      c.beginPath(); c.moveTo(0, H);
+      for (x = 0; x <= W + 10; x += 10) c.lineTo(x, H * 0.86 + Math.sin(x / W * 3.1 + 0.6) * H * 0.035);
+      c.lineTo(W, H); c.closePath(); c.fill();
+      c.fillStyle = K.rgb([70, 88, 78], [78, 170, 104], p);
+      c.beginPath(); c.moveTo(0, H);
+      for (x = 0; x <= W + 10; x += 10) c.lineTo(x, hillY(S, x));
+      c.lineTo(W, H); c.closePath(); c.fill();
+
+      // цветы
+      for (i = 0; i < flowers.length; i++) {
+        var f = flowers[i];
+        if (p <= f.at) continue;
+        var g = K.clamp((p - f.at) / 0.08), fx = f.x * W, fy = hillY(S, fx) + 4;
+        c.strokeStyle = '#3f8f58'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, fy - 16 * g); c.stroke();
+        c.fillStyle = f.c;
+        for (var k = 0; k < 5; k++) {
+          var pa = k * 6.283 / 5 + f.x * 9;
+          c.beginPath(); c.arc(fx + Math.cos(pa) * 4 * g, fy - 16 * g + Math.sin(pa) * 4 * g, 3.2 * g, 0, 6.283); c.fill();
+        }
+        c.fillStyle = '#ffb347';
+        c.beginPath(); c.arc(fx, fy - 16 * g, 2.2 * g, 0, 6.283); c.fill();
+      }
+    },
+    tap: function (S, x, y) {
+      K.burst(x, y, 14, { col: ['#fff3b0', '#ffffff', '#ffd43b'], shape: 'star', power: 180, size: 2 });
+    }
+  });
+})();
+</script>

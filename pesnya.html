@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Для тебя">
+<meta property="og:description" content="Открой, это тебе">
+<meta name="theme-color" content="#101418">
+<title>Любимая песня</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Marck+Script&display=swap">
+<link rel="stylesheet" href="kit.css">
+<style>
+  :root { --bg: #101418; --ink: #f7efe2; --glow: rgba(255, 179, 71, 0.45); --muted: #8f8a80; }
+</style>
+
+<canvas id="scene" aria-label="Крутится пластинка с именем Софа, летят ноты, песня доигрывает и включается снова"></canvas>
+<div id="say"><span>Софа,</span><h1>ты напоминаешь любимую песню, которую хочется включать снова</h1></div>
+<p id="hint">коснись экрана</p>
+
+<script src="kit.js"></script>
+<script>
+(function () {
+  var notes = [], rot = 0, lastLoop = 0, pulse = -9, AMBER = '#ffb347';
+
+  play({
+    sayAt: 5, hintAt: 14, endAt: 30,
+    draw: function (c, S) {
+      var t = S.t, R = Math.min(S.W * 0.36, S.H * 0.2), x = S.cx - R * 0.12, y = S.H * 0.57, PI = Math.PI, i;
+      var playing = K.prog(t, 2, 1.2);
+      rot += S.dt * 2.3 * playing;
+
+      // пластинка
+      c.fillStyle = '#07080a';
+      c.beginPath(); c.arc(x, y, R, 0, 6.283); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.06)'; c.lineWidth = 1;
+      for (var g = 0.42; g < 0.97; g += 0.045) { c.beginPath(); c.arc(x, y, R * g, 0, 6.283); c.stroke(); }
+      c.save();
+      c.translate(x, y); c.rotate(Math.sin(t * 0.5) * 0.05);
+      c.fillStyle = 'rgba(255,255,255,0.07)';
+      for (i = 0; i < 2; i++) {
+        c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, R * 0.97, -0.55 + i * PI, -0.2 + i * PI); c.closePath(); c.fill();
+      }
+      c.restore();
+
+      // этикетка
+      c.save();
+      c.translate(x, y); c.rotate(rot);
+      c.fillStyle = AMBER;
+      c.beginPath(); c.arc(0, 0, R * 0.37, 0, 6.283); c.fill();
+      c.strokeStyle = 'rgba(58,34,6,0.35)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(0, 0, R * 0.33, 0, 6.283); c.stroke();
+      c.fillStyle = '#3a2206'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '400 ' + Math.round(R * 0.25) + 'px ' + S.hand;
+      c.fillText('Софа', 0, -R * 0.1);
+      c.font = '800 ' + Math.round(R * 0.055) + 'px ' + S.word;
+      c.fillText('С Т О Р О Н А   А', 0, R * 0.19);
+      c.restore();
+      c.fillStyle = '#101418';
+      c.beginPath(); c.arc(x, y, R * 0.035, 0, 6.283); c.fill();
+
+      // тонарм
+      var pvx = x + R * 1.12, pvy = y - R, arm = R * 1.25;
+      var aa = K.lerp(PI / 2 - 0.1, PI / 2 + 0.5, K.prog(t, 0.6, 1.6));
+      var nx = pvx + Math.cos(aa) * arm, ny = pvy + Math.sin(aa) * arm;
+      c.strokeStyle = '#cfd3da'; c.lineWidth = Math.max(3, R * 0.03); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(pvx, pvy); c.lineTo(nx, ny); c.stroke();
+      c.fillStyle = '#cfd3da';
+      c.beginPath(); c.arc(pvx, pvy, R * 0.09, 0, 6.283); c.fill();
+      c.fillStyle = AMBER;
+      c.beginPath(); c.arc(nx, ny, R * 0.055, 0, 6.283); c.fill();
+
+      // ноты
+      if (playing > 0.9 && !S.calm && Math.random() < S.dt * 1.6) {
+        notes.push({ x: x - R * 0.5 + Math.random() * R, y: y - R * 0.95, life: 0, ph: Math.random() * 6, g: Math.random() < 0.5 ? '♪' : '♫', s: R * (0.16 + Math.random() * 0.1) });
+      }
+      c.fillStyle = '#ffcf8a'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      for (i = notes.length - 1; i >= 0; i--) {
+        var n = notes[i];
+        n.life += S.dt;
+        if (n.life > 3) { notes.splice(i, 1); continue; }
+        c.globalAlpha = Math.sin(PI * n.life / 3) * 0.9;
+        c.font = Math.round(n.s) + 'px sans-serif';
+        c.fillText(n.g, n.x + Math.sin(n.life * 2 + n.ph) * 12, n.y - n.life * 30);
+      }
+      c.globalAlpha = 1;
+
+      // эквалайзер
+      var ey = y + R * 1.46, count = 22, step = R * 2 / count;
+      c.fillStyle = AMBER;
+      for (i = 0; i < count; i++) {
+        var h = R * 0.34 * playing * (0.2 + 0.8 * Math.abs(Math.sin(t * (2.2 + i % 5 * 0.6) + i * 1.3) * Math.sin(t * 1.1 + i * 0.5)));
+        c.globalAlpha = 0.85;
+        K.rr(S.cx - R + i * step + step * 0.2, ey - h, step * 0.6, h + 2, 1.5); c.fill();
+      }
+      c.globalAlpha = 1;
+
+      // дорожка времени и «повтор»
+      var by = ey + R * 0.24, bx0 = S.cx - R, bx1 = S.cx + R - R * 0.34, lp = 0, dur = 7;
+      if (t > 3.2) {
+        lp = ((t - 3.2) % dur) / dur;
+        var loop = Math.floor((t - 3.2) / dur);
+        if (loop !== lastLoop) {
+          lastLoop = loop; pulse = t;
+          if (!S.calm) K.burst(S.cx + R - R * 0.1, by, 8, { col: '#ffcf8a', shape: 'note', power: 110, grav: -50, size: 2.4 });
+        }
+      }
+      c.lineCap = 'round'; c.lineWidth = 3;
+      c.strokeStyle = 'rgba(255,255,255,0.16)';
+      c.beginPath(); c.moveTo(bx0, by); c.lineTo(bx1, by); c.stroke();
+      c.strokeStyle = AMBER;
+      c.beginPath(); c.moveTo(bx0, by); c.lineTo(bx0 + (bx1 - bx0) * lp, by); c.stroke();
+      c.fillStyle = '#fff3dc';
+      c.beginPath(); c.arc(bx0 + (bx1 - bx0) * lp, by, 5, 0, 6.283); c.fill();
+
+      var since = t - pulse, kick = since < 0.6 ? 1 - since / 0.6 : 0, ir = R * 0.09;
+      c.save();
+      c.translate(S.cx + R - R * 0.1, by);
+      c.scale(1 + kick * 0.5, 1 + kick * 0.5);
+      c.rotate(kick > 0 ? (1 - kick) * 6.283 : 0);
+      c.strokeStyle = AMBER; c.lineWidth = 2.5;
+      c.beginPath(); c.arc(0, 0, ir, 0.5, 5.5); c.stroke();
+      c.fillStyle = AMBER;
+      c.beginPath();
+      c.moveTo(Math.cos(5.5) * ir + ir * 0.55, Math.sin(5.5) * ir + ir * 0.2);
+      c.lineTo(Math.cos(5.5) * ir - ir * 0.5, Math.sin(5.5) * ir + ir * 0.35);
+      c.lineTo(Math.cos(5.5) * ir + ir * 0.1, Math.sin(5.5) * ir - ir * 0.7);
+      c.closePath(); c.fill();
+      c.restore();
+    },
+    tap: function (S, x, y) {
+      K.burst(x, y, 12, { col: ['#ffcf8a', '#ffb347', '#fff3dc'], shape: 'note', power: 170, grav: -60, size: 2.6, dur: 1.6 });
+    }
+  });
+})();
+</script>

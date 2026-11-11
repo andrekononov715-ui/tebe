@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Для тебя">
+<meta property="og:description" content="Открой, это тебе">
+<meta name="theme-color" content="#fff1f3">
+<title>Милота</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Marck+Script&display=swap">
+<link rel="stylesheet" href="kit.css">
+<style>
+  :root { color-scheme: light; --bg: #fff1f3; --ink: #5a1e3a; --glow: rgba(255, 143, 171, 0.35); --muted: #b98a9c; }
+</style>
+
+<canvas id="scene" aria-label="Прибор «уровень милоты»: стрелка доходит до предела, зашкаливает, и из прибора вылетают сердечки"></canvas>
+<div id="say"><span>Софа,</span><h1>по-моему, ты немного злоупотребляешь своей милотой</h1></div>
+<p id="hint">коснись экрана</p>
+
+<script src="kit.js"></script>
+<script>
+(function () {
+  var popped = false, HEARTS = ['#ff6b8b', '#ff9fb5', '#ffc46b'];
+
+  play({
+    sayAt: 9.8, hintAt: 16, endAt: 30,
+    draw: function (c, S) {
+      var t = S.t, R = Math.min(S.W * 0.38, S.H * 0.23), gx = S.cx, gy = S.H * 0.68, PI = Math.PI;
+      var v0 = K.prog(t, 1, 4.2), over = K.prog(t, 5.2, 1.6), wild = t > 5.2 && t < 9.6 && !S.calm;
+
+      c.save();
+      if (wild) c.translate((Math.random() - 0.5) * 4 * over, (Math.random() - 0.5) * 4 * over);
+
+      // шкала
+      c.lineCap = 'butt'; c.lineWidth = R * 0.16;
+      var segs = [[1, 1.6, '#9be3c3'], [1.6, 1.85, '#ffd27a'], [1.85, 2, '#ff6b8b']];
+      for (var s = 0; s < segs.length; s++) {
+        c.strokeStyle = segs[s][2];
+        c.beginPath(); c.arc(gx, gy, R, PI * segs[s][0], PI * segs[s][1] + 0.005); c.stroke();
+      }
+      c.strokeStyle = 'rgba(90,30,58,0.45)'; c.lineWidth = 2;
+      for (var i = 0; i <= 10; i++) {
+        var ta = PI + i / 10 * PI;
+        c.beginPath();
+        c.moveTo(gx + Math.cos(ta) * R * 0.76, gy + Math.sin(ta) * R * 0.76);
+        c.lineTo(gx + Math.cos(ta) * R * 0.86, gy + Math.sin(ta) * R * 0.86);
+        c.stroke();
+      }
+
+      // стрелка
+      var v = v0 + 0.13 * over + (wild ? Math.sin(t * 38) * 0.012 : 0), a = PI + v * PI;
+      c.strokeStyle = '#5a1e3a'; c.lineWidth = Math.max(3, R * 0.03); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(gx, gy); c.lineTo(gx + Math.cos(a) * R * 0.74, gy + Math.sin(a) * R * 0.74); c.stroke();
+      c.fillStyle = '#5a1e3a';
+      c.beginPath(); c.arc(gx, gy, R * 0.07, 0, 6.283); c.fill();
+
+      // показания
+      var pct = t < 5.2 ? Math.round(v0 * 100) : Math.min(999, 100 + Math.floor(Math.pow(t - 5.2, 2) * 48));
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '800 ' + Math.round(R * 0.36) + 'px ' + S.word;
+      c.fillText(t > 9.6 ? '∞' : pct + '%', gx, gy + R * 0.44);
+      c.font = '800 ' + Math.round(R * 0.085) + 'px ' + S.word;
+      c.fillStyle = '#b98a9c';
+      c.fillText('У Р О В Е Н Ь   М И Л О Т Ы', gx, gy + R * 0.76);
+
+      // табличка
+      if (t > 6.2 && (t > 9.6 || Math.sin(t * 9) > 0)) {
+        var pw = R * 0.82, ph = R * 0.24, py = gy - R * 1.36;
+        c.fillStyle = '#ff6b8b';
+        K.rr(gx - pw / 2, py - ph / 2, pw, ph, ph / 2); c.fill();
+        c.fillStyle = '#ffffff';
+        c.font = '800 ' + Math.round(R * 0.11) + 'px ' + S.word;
+        c.fillText('П Е Р Е Б О Р', gx, py + 1);
+      }
+      c.restore();
+
+      if (t > 9.6 && !popped) {
+        popped = true;
+        if (!S.calm) K.burst(gx, gy - R * 0.4, 70, { col: HEARTS, shape: 'heart', power: 430, grav: 260, size: 3, dur: 2.6 });
+      }
+      if (popped && !S.calm && Math.random() < S.dt * 3) {
+        K.burst(Math.random() * S.W, S.H + 12, 1, { col: HEARTS, shape: 'heart', power: 40, grav: -70, size: 3, dur: 5 });
+      }
+    },
+    tap: function (S, x, y) {
+      K.burst(x, y, 16, { col: HEARTS, shape: 'heart', power: 220, grav: 120, size: 2.8 });
+    }
+  });
+})();
+</script>

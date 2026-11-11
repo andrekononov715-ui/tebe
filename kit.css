@@ -1,0 +1,71 @@
+/* Общая основа: один экран, сцена на холсте, сверху обращение и фраза от руки. Цвета задаёт каждая страница. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0a1e;
+  --ink: #ffffff;
+  --glow: rgba(255, 255, 255, 0.4);
+  --muted: #8a8a9a;
+  --font-hand: "Marck Script", "Segoe Script", "Snell Roundhand", cursive;
+  --font-word: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: manipulation;
+}
+#say {
+  position: fixed;
+  left: 0; right: 0;
+  top: calc(env(safe-area-inset-top, 0px) + 5vh);
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 1.8s ease, transform 1.8s ease;
+}
+#say span {
+  display: block;
+  margin-bottom: 0.2em;
+  font: 400 clamp(1.3rem, 5.4vw, 1.9rem)/1.2 var(--font-hand);
+  color: var(--muted);
+}
+#say h1 {
+  margin: 0 auto;
+  max-width: 17em;
+  font: 400 clamp(1.5rem, 6.6vw, 2.7rem)/1.2 var(--font-hand);
+  text-wrap: balance;
+  text-shadow: 0 0 14px var(--glow), 0 0 40px var(--glow);
+}
+#hint {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 3.5vh);
+  margin: 0;
+  text-align: center;
+  font: 800 0.68rem/1 var(--font-word);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+#say.on, #hint.on { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  #say, #hint { transition: none; }
+}

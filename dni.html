@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:title" content="Для тебя">
+<meta property="og:description" content="Открой, это тебе">
+<meta name="theme-color" content="#f4efe6">
+<title>Целые дни</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@800&family=Marck+Script&display=swap">
+<link rel="stylesheet" href="kit.css">
+<style>
+  :root { color-scheme: light; --bg: #f4efe6; --ink: #2e2a26; --glow: rgba(255, 184, 107, 0.4); --muted: #a39a8c; }
+</style>
+
+<canvas id="scene" aria-label="Серый календарь месяца: дни один за другим становятся цветными, в каждом появляется значок"></canvas>
+<div id="say"><span>Софа,</span><h1>некоторые люди украшают фотографии, а некоторые — целые дни</h1></div>
+<p id="hint">коснись любого дня</p>
+
+<script src="kit.js"></script>
+<script>
+(function () {
+  var cells = [], cell = 40, x0 = 0, y0 = 0;
+  var PAL = ['#ffb86b', '#ff8fa3', '#f6c945', '#7fcfb0', '#8fb6ff', '#c79bff'];
+  var DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+
+  function icon(c, kind, s) {
+    c.fillStyle = '#ffffff'; c.strokeStyle = '#ffffff';
+    var i, a;
+    if (kind === 0) {
+      c.beginPath(); c.arc(0, 0, s * 0.14, 0, 6.283); c.fill();
+      c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+      for (i = 0; i < 8; i++) {
+        a = i * Math.PI / 4;
+        c.beginPath(); c.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.2); c.lineTo(Math.cos(a) * s * 0.28, Math.sin(a) * s * 0.28); c.stroke();
+      }
+    } else if (kind === 1) {
+      K.heart(0, s * 0.03, s * 0.17); c.fill();
+    } else if (kind === 2) {
+      K.star(0, s * 0.02, s * 0.25, -Math.PI / 2); c.fill();
+    } else {
+      for (i = 0; i < 5; i++) {
+        a = i * 6.283 / 5 - Math.PI / 2;
+        c.beginPath(); c.arc(Math.cos(a) * s * 0.14, Math.sin(a) * s * 0.14, s * 0.1, 0, 6.283); c.fill();
+      }
+      c.fillStyle = 'rgba(0,0,0,0.18)';
+      c.beginPath(); c.arc(0, 0, s * 0.07, 0, 6.283); c.fill();
+    }
+  }
+
+  play({
+    sayAt: 8.5, hintAt: 15, endAt: 40,
+    init: function (S) {
+      var gw = Math.min(S.W - 40, S.H * 0.46, 440);
+      cell = gw / 7; x0 = S.cx - gw / 2; y0 = S.H * 0.47;
+      var old = cells;
+      cells = [];
+      for (var i = 0; i < 31; i++) {
+        cells.push({
+          i: i, col: i % 7, row: Math.floor(i / 7), at: 3 + i * 0.27,
+          c: PAL[(i * 5 + Math.floor(i / 7)) % PAL.length], ic: (i * 3 + Math.floor(i / 7)) % 4,
+          pop: old[i] ? old[i].pop : -9, done: old[i] ? old[i].done : false
+        });
+      }
+    },
+    draw: function (c, S) {
+      var t = S.t, gap = cell * 0.12, s = cell - gap, wave = K.prog(t, 13, 2);
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '800 ' + Math.round(cell * 0.24) + 'px ' + S.word;
+      c.fillStyle = '#a39a8c';
+      for (var d = 0; d < 7; d++) c.fillText(DAYS[d], x0 + d * cell + cell / 2, y0 - cell * 0.36);
+
+      for (var i = 0; i < cells.length; i++) {
+        var q = cells[i], px = x0 + q.col * cell + cell / 2, py = y0 + q.row * cell + cell / 2, on = t >= q.at;
+        if (on && !q.done) {
+          q.done = true; q.pop = t;
+          if (!S.calm) K.burst(px, py, 5, { col: q.c, power: 90, size: 1.6, dur: 0.7 });
+        }
+        var k = 1 + (on ? 0.24 * Math.max(0, 1 - (t - q.pop) / 0.45) : 0) + 0.04 * Math.sin(t * 2.4 - i * 0.35) * wave;
+        c.save();
+        c.translate(px, py); c.scale(k, k);
+        K.rr(-s / 2, -s / 2, s, s, s * 0.24);
+        c.fillStyle = on ? q.c : '#e2dbcd';
+        c.fill();
+        if (on) {
+          icon(c, q.ic, s);
+          c.fillStyle = 'rgba(255,255,255,0.9)';
+          c.font = '800 ' + Math.round(s * 0.19) + 'px ' + S.word;
+          c.fillText(String(i + 1), -s * 0.29, -s * 0.3);
+        } else {
+          c.fillStyle = '#b3aa9b';
+          c.font = '800 ' + Math.round(s * 0.3) + 'px ' + S.word;
+          c.fillText(String(i + 1), 0, 1);
+        }
+        c.restore();
+      }
+    },
+    tap: function (S, x, y) {
+      var col = Math.floor((x - x0) / cell), row = Math.floor((y - y0) / cell), q = cells[row * 7 + col];
+      if (col >= 0 && col < 7 && row >= 0 && q) {
+        if (!q.done) { q.at = 0; return; }
+        q.pop = S.t;
+        K.burst(x0 + col * cell + cell / 2, y0 + row * cell + cell / 2, 12, { col: q.c, shape: 'star', power: 170, size: 2 });
+      } else {
+        K.burst(x, y, 12, { col: PAL, shape: 'star', power: 170, size: 2 });
+      }
+    }
+  });
+})();
+</script>
